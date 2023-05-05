@@ -1,0 +1,88 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: poc1
+  labels:
+    app: poc1
+    version: v1
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: poc1
+      version: v1
+  template:
+    metadata:
+      labels:
+        app: poc1
+        version: v1
+    spec:
+      serviceAccountName: poc1
+      containers:
+        - name: poc1
+          image: 'zerotrustpoc/poc1'
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 3000
+          env:
+            - name: PORT
+              value: '3000'
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: poc1
+  labels:
+    account: poc1
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: poc1
+  labels:
+    app: poc1
+    service: poc1
+spec:
+  selector:
+    app: poc1
+  ports:
+    - port: 3000
+      name: http
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: DestinationRule
+metadata:
+  name: poc1-destination-rule
+spec:
+  host: poc1
+  trafficPolicy:
+    loadBalancer:
+      simple: RANDOM
+  subsets:
+    - name: v1
+      labels:
+        version: v1
+      trafficPolicy:
+        loadBalancer:
+          simple: ROUND_ROBIN
+---
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: 'poc1-viewer'
+  namespace: default
+spec:
+  selector:
+    matchLabels:
+      app: poc1
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            requestPrincipals: ['seamless/*']
+      to:
+        - operation:
+            paths: ['/poc1']
+      when:
+        - key: request.auth.claims[roles]
+          values: ['USER']

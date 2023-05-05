@@ -1,0 +1,66 @@
+apiVersion: networking.istio.io/v1alpha3
+kind: Gateway
+metadata:
+  name: poc-gateway
+  namespace: default
+spec:
+  selector:
+    istio: ingressgateway # use Istio default gateway implementation
+  servers:
+    - port:
+        number: 80
+        name: http
+        protocol: HTTP
+      hosts:
+        - "*"
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: poc
+  namespace: default
+spec:
+  hosts:
+    - "*"
+  gateways:
+    - poc-gateway
+  http:
+    - match:
+        - uri:
+            prefix: /poc1
+      route:
+        - destination:
+            port:
+              number: 3000
+            host: poc1
+            subset: v1
+    - match:
+        - uri:
+            prefix: /poc2
+      route:
+        - destination:
+            port:
+              number: 3000
+            host: poc2
+            subset: v1
+---
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: frontend-ingress
+  namespace: istio-system
+spec:
+  selector:
+    matchLabels:
+      istio: ingressgateway
+  action: ALLOW
+  rules:
+  - from:
+    - source:
+       requestPrincipals: ["seamless/*"]
+    to:
+    - operation:
+        paths: ["/poc1","/poc2"]
+    when:
+    - key: request.auth.claims[roles]
+      values: ["USER"]

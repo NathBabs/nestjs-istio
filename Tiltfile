@@ -1,0 +1,6 @@
+k8s_yaml('IstioSecurity.yml')
+load('./services/poc1/Poc1Tiltfile', 'poc1')
+poc1('./services/poc1')
+load('./services/poc2/Poc2Tiltfile', 'poc2')
+poc2('./services/poc2')
+k8s_yaml('IstioGateway.yml')

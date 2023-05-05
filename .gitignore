@@ -1,0 +1,8 @@
+share
+./services/poc2/node_modules
+./services/poc1/node_modules
+pyvenv.cfg
+lib
+include
+bin
+NetworkPolicies.yml
